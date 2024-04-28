@@ -9,10 +9,13 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 (async () => {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
+
+  // food and page number you want to scrape
+  const food = "ayam";
   const pageNumberNow = 8;
 
   await page.goto(
-    `https://cookpad.com/id/cari/buncis?event=search.typed_query&page=${pageNumberNow}`,
+    `https://cookpad.com/id/cari/${food}?event=search.typed_query&page=${pageNumberNow}`,
     {
       waitUntil: "networkidle2",
     }
