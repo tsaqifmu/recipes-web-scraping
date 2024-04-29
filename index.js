@@ -1,18 +1,23 @@
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import fs from "fs/promises";
+import path from "path";
+
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+// import { writeFile } from "fs";
 
 puppeteer.use(StealthPlugin());
 
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const sleep = () => new Promise((res) => setTimeout(res, 1000));
 
 (async () => {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
 
   // food and page number you want to scrape
-  const food = "ayam";
-  const pageNumberNow = 8;
+  const food = "udang";
+  const pageNumberNow = 7;
 
   await page.goto(
     `https://cookpad.com/id/cari/${food}?event=search.typed_query&page=${pageNumberNow}`,
@@ -41,7 +46,7 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
     const recipes = [];
     for (const url of getUrl) {
       await page.goto(url, { waitUntil: "load" });
-      await sleep(1000);
+      await sleep();
 
       const recipe = await page.evaluate(() => {
         // get title data
@@ -78,10 +83,46 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
       recipes.push(recipe);
       await page.goBack();
-      await sleep(1000);
+      await sleep();
     }
 
-    await fs.writeFile(`${pageNumber}.json`, JSON.stringify(recipes, null, 2));
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+
+    const folderPath = path.join(__dirname, "Hasil");
+
+    const subFolder = path.join(folderPath, food);
+
+    const filePath = path.join(subFolder, `${pageNumber}.json`);
+
+    // Fungsi untuk membuat folder secara asinkron
+    const createFolderAsync = async (folderPath) => {
+      try {
+        await fs.mkdir(folderPath, { recursive: true });
+        // console.log(`Folder ${folderPath} berhasil dibuat.`);
+      } catch (err) {
+        console.error(
+          // `Terjadi kesalahan saat membuat folder ${folderPath}:`,
+          err
+        );
+      }
+    };
+
+    const writeFile = async (filePath, data) => {
+      try {
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+        console.log(`File ${filePath} berhasil dibuat.`);
+      } catch (err) {
+        console.error(`Terjadi kesalahan saat membuat file ${filePath}:`, err);
+      }
+    };
+    // Membuat folder Hasil
+    await createFolderAsync(folderPath);
+    // Membuat folder ayam
+    await createFolderAsync(subFolder);
+
+    await writeFile(filePath, recipes);
+
     pageNumber++;
 
     // check if next button is disabled
@@ -93,7 +134,7 @@ const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
       await page.click("div.pagination.my-lg > a:last-child");
       await page.waitForNavigation();
     } else {
-      console.log("button disabled");
+      console.log("Halaman sudah habis");
     }
   }
 
